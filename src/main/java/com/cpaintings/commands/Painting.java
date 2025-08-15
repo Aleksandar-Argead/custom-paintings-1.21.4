@@ -2,7 +2,15 @@ package com.cpaintings.commands;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.URI;
+import javax.imageio.ImageIO;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.item.map.MapState;
 import net.minecraft.component.ComponentType;
 import net.minecraft.component.type.MapIdComponent;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,97 +23,90 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
 import net.minecraft.world.World;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.InputStream;
-import java.net.URI;
-
 public class Painting {
+
     @SuppressWarnings("unchecked")
-    public static final ComponentType<MapIdComponent> mapIdComponentType =
-            (ComponentType<MapIdComponent>) net.minecraft.registry.Registries.DATA_COMPONENT_TYPE.get(Identifier.of("minecraft", "map_id"));
+    public static final ComponentType<MapIdComponent> mapIdComponentType = (ComponentType<MapIdComponent>) net.minecraft.registry.Registries.DATA_COMPONENT_TYPE.get(Identifier.of("minecraft", "map_id"));
 
     // Standard Minecraft map base colors
     private static final int[] MINECRAFT_MAP_COLORS = {
-            0x000000, // 0  (NONE / Transparent)
-            0x7FB238, // 1  (GRASS)
-            0xF7E9A3, // 2  (SAND)
-            0xC7C7C7, // 3  (WOOL)
-            0xFF0000, // 4  (FIRE)
-            0xA0A0FF, // 5  (ICE)
-            0xA7A7A7, // 6  (METAL)
-            0x007C00, // 7  (PLANT)
-            0xFFFFFF, // 8  (SNOW)
-            0xA4A8B8, // 9  (CLAY)
-            0x976D4D, // 10 (DIRT)
-            0x707070, // 11 (STONE)
-            0x4040FF, // 12 (WATER)
-            0x8F7748, // 13 (WOOD)
-            0xFFFCF5, // 14 (QUARTZ)
-            0xD87F33, // 15 (COLOR_ORANGE)
-            0xB24CD8, // 16 (COLOR_MAGENTA)
-            0x6699D8, // 17 (COLOR_LIGHT_BLUE)
-            0xE5E533, // 18 (COLOR_YELLOW)
-            0x7FCC19, // 19 (COLOR_LIGHT_GREEN)
-            0xF27FA5, // 20 (COLOR_PINK)
-            0x4C4C4C, // 21 (COLOR_GRAY)
-            0x999999, // 22 (COLOR_LIGHT_GRAY)
-            0x4C7F99, // 23 (COLOR_CYAN)
-            0x7F3FB2, // 24 (COLOR_PURPLE)
-            0x334CB2, // 25 (COLOR_BLUE)
-            0x664C33, // 26 (COLOR_BROWN)
-            0x667F33, // 27 (COLOR_GREEN)
-            0x993333, // 28 (COLOR_RED)
-            0x191919, // 29 (COLOR_BLACK)
-            0xFAEE4D, // 30 (GOLD)
-            0x5CDBD5, // 31 (DIAMOND)
-            0x4A80FF, // 32 (LAPIS)
-            0x00D93A, // 33 (EMERALD)
-            0x815631, // 34 (PODZOL / SPRUCE)
-            0x700200, // 35 (NETHER)
-            0xD1B1A1, // 36 (TERRACOTTA_WHITE)
-            0x9F5224, // 37 (TERRACOTTA_ORANGE)
-            0x95576C, // 38 (TERRACOTTA_MAGENTA)
-            0x706C8A, // 39 (TERRACOTTA_LIGHT_BLUE)
-            0xBA8524, // 40 (TERRACOTTA_YELLOW)
-            0x677535, // 41 (TERRACOTTA_LIGHT_GREEN)
-            0xA04D4E, // 42 (TERRACOTTA_PINK)
-            0x392923, // 43 (TERRACOTTA_GRAY)
-            0x876B62, // 44 (TERRACOTTA_LIGHT_GRAY)
-            0x575C5C, // 45 (TERRACOTTA_CYAN)
-            0x7A4958, // 46 (TERRACOTTA_PURPLE)
-            0x4C3E5C, // 47 (TERRACOTTA_BLUE)
-            0x4C3223, // 48 (TERRACOTTA_BROWN)
-            0x4C522A, // 49 (TERRACOTTA_GREEN)
-            0x8E3C2E, // 50 (TERRACOTTA_RED)
-            0x251610, // 51 (TERRACOTTA_BLACK)
-            0xBD3031, // 52 (CRIMSON_NYLIUM)
-            0x943F61, // 53 (CRIMSON_STEM)
-            0x5C191D, // 54 (CRIMSON_HYPHAE)
-            0x167E86, // 55 (WARPED_NYLIUM)
-            0x3A8E8C, // 56 (WARPED_STEM)
-            0x562C3E, // 57 (WARPED_HYPHAE)
-            0x14B485, // 58 (WARPED_WART_BLOCK)
-            0x646464, // 59 (DEEPSLATE)
-            0xD8AF93, // 60 (RAW_IRON)
-            0x7FA796  // 61 (GLOW_LICHEN)
+        0x000000, // 0  (NONE / Transparent)
+        0x7FB238, // 1  (GRASS)
+        0xF7E9A3, // 2  (SAND)
+        0xC7C7C7, // 3  (WOOL)
+        0xFF0000, // 4  (FIRE)
+        0xA0A0FF, // 5  (ICE)
+        0xA7A7A7, // 6  (METAL)
+        0x007C00, // 7  (PLANT)
+        0xFFFFFF, // 8  (SNOW)
+        0xA4A8B8, // 9  (CLAY)
+        0x976D4D, // 10 (DIRT)
+        0x707070, // 11 (STONE)
+        0x4040FF, // 12 (WATER)
+        0x8F7748, // 13 (WOOD)
+        0xFFFCF5, // 14 (QUARTZ)
+        0xD87F33, // 15 (COLOR_ORANGE)
+        0xB24CD8, // 16 (COLOR_MAGENTA)
+        0x6699D8, // 17 (COLOR_LIGHT_BLUE)
+        0xE5E533, // 18 (COLOR_YELLOW)
+        0x7FCC19, // 19 (COLOR_LIGHT_GREEN)
+        0xF27FA5, // 20 (COLOR_PINK)
+        0x4C4C4C, // 21 (COLOR_GRAY)
+        0x999999, // 22 (COLOR_LIGHT_GRAY)
+        0x4C7F99, // 23 (COLOR_CYAN)
+        0x7F3FB2, // 24 (COLOR_PURPLE)
+        0x334CB2, // 25 (COLOR_BLUE)
+        0x664C33, // 26 (COLOR_BROWN)
+        0x667F33, // 27 (COLOR_GREEN)
+        0x993333, // 28 (COLOR_RED)
+        0x191919, // 29 (COLOR_BLACK)
+        0xFAEE4D, // 30 (GOLD)
+        0x5CDBD5, // 31 (DIAMOND)
+        0x4A80FF, // 32 (LAPIS)
+        0x00D93A, // 33 (EMERALD)
+        0x815631, // 34 (PODZOL / SPRUCE)
+        0x700200, // 35 (NETHER)
+        0xD1B1A1, // 36 (TERRACOTTA_WHITE)
+        0x9F5224, // 37 (TERRACOTTA_ORANGE)
+        0x95576C, // 38 (TERRACOTTA_MAGENTA)
+        0x706C8A, // 39 (TERRACOTTA_LIGHT_BLUE)
+        0xBA8524, // 40 (TERRACOTTA_YELLOW)
+        0x677535, // 41 (TERRACOTTA_LIGHT_GREEN)
+        0xA04D4E, // 42 (TERRACOTTA_PINK)
+        0x392923, // 43 (TERRACOTTA_GRAY)
+        0x876B62, // 44 (TERRACOTTA_LIGHT_GRAY)
+        0x575C5C, // 45 (TERRACOTTA_CYAN)
+        0x7A4958, // 46 (TERRACOTTA_PURPLE)
+        0x4C3E5C, // 47 (TERRACOTTA_BLUE)
+        0x4C3223, // 48 (TERRACOTTA_BROWN)
+        0x4C522A, // 49 (TERRACOTTA_GREEN)
+        0x8E3C2E, // 50 (TERRACOTTA_RED)
+        0x251610, // 51 (TERRACOTTA_BLACK)
+        0xBD3031, // 52 (CRIMSON_NYLIUM)
+        0x943F61, // 53 (CRIMSON_STEM)
+        0x5C191D, // 54 (CRIMSON_HYPHAE)
+        0x167E86, // 55 (WARPED_NYLIUM)
+        0x3A8E8C, // 56 (WARPED_STEM)
+        0x562C3E, // 57 (WARPED_HYPHAE)
+        0x14B485, // 58 (WARPED_WART_BLOCK)
+        0x646464, // 59 (DEEPSLATE)
+        0xD8AF93, // 60 (RAW_IRON)
+        0x7FA796, // 61 (GLOW_LICHEN)
     };
 
     // Standard brightness levels for Minecraft maps
     private static final float[] BRIGHTNESS_LEVELS = {
-            0.71f, // Shade 1
-            0.86f, // Shade 2
-            1.00f, // Shade 3
-            0.53f  // Shade 4 (not used)
+        0.71f, // Shade 1
+        0.86f, // Shade 2
+        1.00f, // Shade 3
+        0.53f, // Shade 4 (not used)
     };
 
     // Precomputed palette for dithering
     private static final Color[] PALETTE = new Color[256];
+
     static {
         for (int base = 1; base < MINECRAFT_MAP_COLORS.length; base++) {
             int baseColor = MINECRAFT_MAP_COLORS[base];
@@ -125,6 +126,7 @@ public class Painting {
 
     // Map color indices to blocks
     private static final Block[] COLOR_TO_BLOCK = new Block[MINECRAFT_MAP_COLORS.length];
+
     static {
         COLOR_TO_BLOCK[0] = Blocks.AIR; // Transparent
         COLOR_TO_BLOCK[1] = Blocks.GRASS_BLOCK; // GRASS
@@ -188,42 +190,42 @@ public class Painting {
         COLOR_TO_BLOCK[59] = Blocks.DEEPSLATE; // DEEPSLATE
         COLOR_TO_BLOCK[60] = Blocks.RAW_IRON_BLOCK; // RAW_IRON
         COLOR_TO_BLOCK[61] = Blocks.GLOW_LICHEN; // GLOW_LICHEN
-    };
+    }
 
     public static void register() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
-                CommandManager.literal("painting")
-                        .then(
-                                CommandManager.argument("url", StringArgumentType.string())
-                                        .executes(context -> {
-                                            String url = StringArgumentType.getString(context, "url");
-                                            ServerCommandSource source = context.getSource();
-                                            new Thread(() -> processPainting(source, url, 1, 1)).start();
-                                            return 1;
-                                        })
-                                        .then(
-                                                CommandManager.argument("blocksx", IntegerArgumentType.integer(1))
-                                                        .executes(context -> {
-                                                            String url = StringArgumentType.getString(context, "url");
-                                                            int blocksx = IntegerArgumentType.getInteger(context, "blocksx");
-                                                            ServerCommandSource source = context.getSource();
-                                                            new Thread(() -> processPainting(source, url, blocksx, 1)).start();
-                                                            return 1;
-                                                        })
-                                                        .then(
-                                                                CommandManager.argument("blocksy", IntegerArgumentType.integer(1))
-                                                                        .executes(context -> {
-                                                                            String url = StringArgumentType.getString(context, "url");
-                                                                            int blocksx = IntegerArgumentType.getInteger(context, "blocksx");
-                                                                            int blocksy = IntegerArgumentType.getInteger(context, "blocksy");
-                                                                            ServerCommandSource source = context.getSource();
-                                                                            new Thread(() -> processPainting(source, url, blocksx, blocksy)).start();
-                                                                            return 1;
-                                                                        })
-                                                        )
-                                        )
-                        )
-        ));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+            dispatcher.register(
+                CommandManager.literal("painting").then(
+                        CommandManager.argument("url", StringArgumentType.string())
+                            .executes(context -> {
+                                String url = StringArgumentType.getString(context, "url");
+                                ServerCommandSource source = context.getSource();
+                                new Thread(() -> processPainting(source, url, 1, 1)).start();
+                                return 1;
+                            })
+                            .then(
+                                CommandManager.argument("blocksx", IntegerArgumentType.integer(1))
+                                    .executes(context -> {
+                                        String url = StringArgumentType.getString(context, "url");
+                                        int blocksx = IntegerArgumentType.getInteger(context, "blocksx");
+                                        ServerCommandSource source = context.getSource();
+                                        new Thread(() -> processPainting(source, url, blocksx, 1)).start();
+                                        return 1;
+                                    })
+                                    .then(
+                                        CommandManager.argument("blocksy", IntegerArgumentType.integer(1)).executes(context -> {
+                                                String url = StringArgumentType.getString(context, "url");
+                                                int blocksx = IntegerArgumentType.getInteger(context, "blocksx");
+                                                int blocksy = IntegerArgumentType.getInteger(context, "blocksy");
+                                                ServerCommandSource source = context.getSource();
+                                                new Thread(() -> processPainting(source, url, blocksx, blocksy)).start();
+                                                return 1;
+                                            })
+                                    )
+                            )
+                    )
+            )
+        );
     }
 
     public static boolean isInventoryFull(PlayerEntity player) {
@@ -293,9 +295,11 @@ public class Painting {
 
                             // Determine elevation based on shade
                             int elevation;
-                            if (shade == 0) elevation = -1; // Shade 1: lower
-                            else if (shade == 1) elevation = 0;  // Shade 2: same
-                            else elevation = 1;                  // Shade 3: higher
+                            if (shade == 0) elevation = -1;
+                            // Shade 1: lower
+                            else if (shade == 1) elevation = 0;
+                            // Shade 2: same
+                            else elevation = 1; // Shade 3: higher
 
                             // Adjust elevation relative to northern neighbor
                             int northZ = startZ + zz - 1;
@@ -314,13 +318,13 @@ public class Painting {
 
             // Create a single map item to view the result
             MapIdComponent mapId = world.increaseAndGetMapId();
-            net.minecraft.world.map.MapState mapState = net.minecraft.world.map.MapState.of(
-                    startX + totalWidth / 2,
-                    startZ + totalHeight / 2,
-                    (byte) 2, // scale 1:4
-                    false,
-                    false,
-                    world.getRegistryKey()
+            MapState mapState = net.minecraft.world.map.MapState.of(
+                startX + totalWidth / 2,
+                startZ + totalHeight / 2,
+                (byte) 2, // scale 1:4
+                false,
+                false,
+                world.getRegistryKey()
             );
             world.putMapState(mapId, mapState);
 
@@ -332,10 +336,7 @@ public class Painting {
                 player.getInventory().insertStack(mapItem);
             }
 
-            source.sendFeedback(
-                    () -> Text.literal("Created " + (blocksx * blocksy) + "x map structure at " + startX + "," + startZ + ". Map in inventory!"),
-                    false
-            );
+            source.sendFeedback(() -> Text.literal("Created " + (blocksx * blocksy) + "x map structure at " + startX + "," + startZ + ". Map in inventory!"), false);
         } catch (Exception e) {
             source.sendError(Text.literal("An error occurred: " + e.getMessage()));
         }
@@ -398,27 +399,27 @@ public class Painting {
                 Color palColor = getPaletteColor(index);
                 float errR = pixel[0] - palColor.getRed() / 255f;
                 float errG = pixel[1] - palColor.getGreen() / 255f;
-        float errB = pixel[2] - palColor.getBlue() / 255f;
+                float errB = pixel[2] - palColor.getBlue() / 255f;
 
                 // Diffuse error
                 if (x + 1 < width) {
-                    pixels[x + 1][y][0] += errR * 7 / 16f;
-                    pixels[x + 1][y][1] += errG * 7 / 16f;
-                    pixels[x + 1][y][2] += errB * 7 / 16f;
+                    pixels[x + 1][y][0] += (errR * 7) / 16f;
+                    pixels[x + 1][y][1] += (errG * 7) / 16f;
+                    pixels[x + 1][y][2] += (errB * 7) / 16f;
                 }
                 if (y + 1 < height) {
                     if (x - 1 >= 0) {
-                        pixels[x - 1][y + 1][0] += errR * 3 / 16f;
-                        pixels[x - 1][y + 1][1] += errG * 3 / 16f;
-                        pixels[x - 1][y + 1][2] += errB * 3 / 16f;
+                        pixels[x - 1][y + 1][0] += (errR * 3) / 16f;
+                        pixels[x - 1][y + 1][1] += (errG * 3) / 16f;
+                        pixels[x - 1][y + 1][2] += (errB * 3) / 16f;
                     }
-                    pixels[x][y + 1][0] += errR * 5 / 16f;
-                    pixels[x][y + 1][1] += errG * 5 / 16f;
-                    pixels[x][y + 1][2] += errB * 5 / 16f;
+                    pixels[x][y + 1][0] += (errR * 5) / 16f;
+                    pixels[x][y + 1][1] += (errG * 5) / 16f;
+                    pixels[x][y + 1][2] += (errB * 5) / 16f;
                     if (x + 1 < width) {
-                        pixels[x + 1][y + 1][0] += errR * 1 / 16f;
-                        pixels[x + 1][y + 1][1] += errG * 1 / 16f;
-                        pixels[x + 1][y + 1][2] += errB * 1 / 16f;
+                        pixels[x + 1][y + 1][0] += (errR * 1) / 16f;
+                        pixels[x + 1][y + 1][1] += (errG * 1) / 16f;
+                        pixels[x + 1][y + 1][2] += (errB * 1) / 16f;
                     }
                 }
             }
