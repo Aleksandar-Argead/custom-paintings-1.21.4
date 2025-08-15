@@ -12,5 +12,6 @@ public class CustomPaintings implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		Painting.register();
+		LOGGER.info("Custom Paintings mod initialized");
 	}
 }

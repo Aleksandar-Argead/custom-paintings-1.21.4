@@ -3,7 +3,7 @@
 	"id": "custom-paintings",
 	"version": "${version}",
 	"name": "Custom Paintings",
-	"description": "Custom Paintings!",
+	"description": "Allows players to create custom paintings from images using commands.",
 	"authors": [
 		"GroceyLot"
 	],
@@ -20,14 +20,10 @@
 			"com.cpaintings.CustomPaintings"
 		]
 	},
-	"mixins": [
-	],
 	"depends": {
 		"fabricloader": ">=0.16.9",
 		"minecraft": "~1.21.4",
 		"java": ">=21",
 		"fabric-api": "*"
-	},
-	"suggests": {
 	}
 }
