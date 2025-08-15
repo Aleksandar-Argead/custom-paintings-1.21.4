@@ -318,7 +318,7 @@ public class Painting {
 
             // Create a single map item to view the result
             MapIdComponent mapId = world.increaseAndGetMapId();
-            MapState mapState = net.minecraft.world.map.MapState.of(
+            MapState mapState = MapState.of(
                 startX + totalWidth / 2,
                 startZ + totalHeight / 2,
                 (byte) 2, // scale 1:4
